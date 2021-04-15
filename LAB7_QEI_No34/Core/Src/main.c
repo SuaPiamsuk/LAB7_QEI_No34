@@ -100,6 +100,9 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
+  //Encoder
+  HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
+  //timer
   HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
