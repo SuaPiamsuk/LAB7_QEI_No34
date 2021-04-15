@@ -52,6 +52,8 @@ uint64_t _micros = 0;
 uint64_t Timestamp = 0;
 
 float EncoderVel = 0;
+
+uint16_t PWMout = 5000;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -120,10 +122,12 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	if(micros() - Timestamp >= 10000)
+	if(micros() - Timestamp >= 100000)
 	{
 		Timestamp = micros();
 		EncoderVel = EncoderVelocity_Update();
+
+		__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
 	}
   }
   /* USER CODE END 3 */
