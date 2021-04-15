@@ -49,6 +49,9 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 //save time microseconds
 uint64_t _micros = 0;
+uint64_t Timestamp = 0;
+
+float EncoderVel = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,6 +63,7 @@ static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 uint64_t micros();
+float EncoderVelocity_Update();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,6 +117,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	if(micros() - Timestamp >= 10000)
+	{
+		Timestamp = micros();
+		EncoderVel = EncoderVelocity_Update();
+	}
   }
   /* USER CODE END 3 */
 }
@@ -382,7 +391,39 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//EncoderVelocity_Update
+#define MAX_Encoder_Overflow 1500
+#define MAX_Encoder_Period 3072
 
+__inline__ float EncoderVelocity_Update()
+{
+	static uint32_t EncoderLastPosition = 0;
+	static uint64_t EncoderLastTime = 0;
+
+	uint32_t EncoderNowPosition = htim1.Instance->CNT;
+	uint64_t EncoderNowTime = micros();
+
+	int32_t EncoderDiffPosition = 0;
+	uint64_t EncoderDiffTime = 0;
+
+	EncoderDiffPosition =  EncoderNowPosition - EncoderLastPosition;
+	EncoderDiffTime = EncoderNowTime - EncoderLastTime;
+
+	if(EncoderDiffPosition >= MAX_Encoder_Overflow)
+	{
+		EncoderDiffPosition -= MAX_Encoder_Period;
+	}
+	else if(EncoderDiffPosition >= MAX_Encoder_Overflow)
+	{
+		EncoderDiffPosition += MAX_Encoder_Period;
+	}
+	//Update last state
+	EncoderLastPosition = EncoderNowPosition;
+	EncoderLastTime = EncoderNowTime;
+
+	return (EncoderDiffPosition*1000000) / ((float)EncoderDiffTime);
+
+}
 //time in microseconds
 __inline__ uint64_t micros()
 {
