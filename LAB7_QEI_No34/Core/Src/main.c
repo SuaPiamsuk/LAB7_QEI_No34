@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h" //printf
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -141,24 +141,24 @@ int main(void)
 		Timestamp = micros();
 		EncoderVel = EncoderVelocity_Update();
 		EncoderVel2 = (EncoderVel + EncoderVelocity_Update())/2.0;
-		EncoderVel3 = EncoderVel2;
+
 		EncoderVel2 = EncoderVel*0.0195;
-		if(EncoderVel2 <40) //>100 = 5641
-		{
-
-			error_kp = 15 - EncoderVel2;
-			error_ki = error_ki + error_kp;
-			error_kd = error_kp / 0.2;
-
-			Error_Kp = Kp*error_kp;
-			Error_Ki = Ki*error_ki;
-			Error_Kd = Kd*error_kd;
-
-			PWMout = PWMout + Error_Kp + Error_Ki + Error_Kd;
 
 
-			__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
-		}
+		error_kp = 15 - EncoderVel2;
+		error_ki = error_ki + error_kp;
+		error_kd = error_kp / 0.2;
+
+		Error_Kp = Kp*error_kp;
+		Error_Ki = Ki*error_ki;
+		Error_Kd = Kd*error_kd;
+
+		PWMout = PWMout + Error_Kp + Error_Ki + Error_Kd;
+
+
+		__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
+
+
 
 	}
 	///////////////////////////////////////////////////////////////////
