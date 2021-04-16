@@ -52,8 +52,20 @@ uint64_t _micros = 0;
 uint64_t Timestamp = 0;
 
 float EncoderVel = 0;
+float EncoderVel2 = 0;
+float EncoderVel3 = 0;
 
-uint16_t PWMout = 5000;
+uint16_t PWMout = 0;
+//PID
+float error_kp = 0;
+float error_ki = 0;
+float error_kd = 0;
+float Kp=100.0;
+float Ki=1.2;
+float Kd=0;
+float Error_Kp = 0;
+float Error_Ki = 0;
+float Error_Kd = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -122,13 +134,42 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	if(micros() - Timestamp >= 100000)
+	  //////////////////////////////////////////////////////////////////
+	//RAW Read
+	if(micros() - Timestamp >= 1000000)
 	{
 		Timestamp = micros();
 		EncoderVel = EncoderVelocity_Update();
+		EncoderVel2 = (EncoderVel + EncoderVelocity_Update())/2.0;
+		EncoderVel3 = EncoderVel2;
+		EncoderVel2 = EncoderVel*0.0195;
+		if(EncoderVel2 <40) //>100 = 5641
+		{
 
-		__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
+			error_kp = 15 - EncoderVel2;
+			error_ki = error_ki + error_kp;
+			error_kd = error_kp / 0.2;
+
+			Error_Kp = Kp*error_kp;
+			Error_Ki = Ki*error_ki;
+			Error_Kd = Kd*error_kd;
+
+			PWMout = PWMout + Error_Kp + Error_Ki + Error_Kd;
+
+
+			__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
+		}
+
 	}
+	///////////////////////////////////////////////////////////////////
+//	  if (micros() - Timestamp >= 100)
+//	  		{
+//	  			Timestamp = micros();
+//	  			EncoderVel = (EncoderVel * 99 + EncoderVelocity_Update()) / 100.0;
+//	  			//EncoderVel2 = EncoderVel*0.0195;
+//
+//	  			__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
+//	  		}
   }
   /* USER CODE END 3 */
 }
@@ -210,7 +251,7 @@ static void MX_TIM1_Init(void)
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
+  sConfig.IC2Filter = 15;
   if (HAL_TIM_Encoder_Init(&htim1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -420,7 +461,7 @@ __inline__ float EncoderVelocity_Update()
 	{
 		EncoderDiffPosition -= MAX_Encoder_Period;
 	}
-	else if(EncoderDiffPosition >= MAX_Encoder_Overflow)
+	else if(-EncoderDiffPosition >= MAX_Encoder_Overflow)
 	{
 		EncoderDiffPosition += MAX_Encoder_Period;
 	}
