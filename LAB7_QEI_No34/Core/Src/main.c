@@ -55,13 +55,17 @@ float EncoderVel = 0;
 float EncoderVel2 = 0;
 float EncoderVel3 = 0;
 
-uint16_t PWMout = 0;
+int16_t PWMout = 5000;
 //PID
+float setpoint = 20.0;
+float error = 0;
+float last_error = 0;
+
 float error_kp = 0;
 float error_ki = 0;
 float error_kd = 0;
-float Kp=100.0;
-float Ki=1.2;
+float Kp=70.0;
+float Ki=0;
 float Kd=0;
 float Error_Kp = 0;
 float Error_Ki = 0;
@@ -125,6 +129,7 @@ int main(void)
   //START PWM
   HAL_TIM_Base_Start(&htim3);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -136,27 +141,38 @@ int main(void)
     /* USER CODE BEGIN 3 */
 	  //////////////////////////////////////////////////////////////////
 	//RAW Read
-	if(micros() - Timestamp >= 1000000)
+	if(micros() - Timestamp >= 10000)
 	{
 		Timestamp = micros();
 		EncoderVel = EncoderVelocity_Update();
-		EncoderVel2 = (EncoderVel + EncoderVelocity_Update())/2.0;
+		//EncoderVel2 = (EncoderVel + EncoderVelocity_Update())/2.0;
 
-		EncoderVel2 = EncoderVel*0.0195;
+		EncoderVel2 = EncoderVel *60.0/3071.0 ; // calculate RPM 60/3071
+
+		error = setpoint - EncoderVel2;
+
+		Error_Kp = error;
+		Error_Ki = Error_Ki + error;
+		Error_Kd = error - last_error;
+
+		PWMout = PWMout + Kp*Error_Kp + Ki*Error_Ki + Kd*Error_Kd;
+
+		last_error = error;
 
 
-		error_kp = 15 - EncoderVel2;
-		error_ki = error_ki + error_kp;
-		error_kd = error_kp / 0.2;
+		if(PWMout > 0)
+		{
 
-		Error_Kp = Kp*error_kp;
-		Error_Ki = Ki*error_ki;
-		Error_Kd = Kd*error_kd;
+			__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
+			__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_2 , 0);
+		}
+		else if(PWMout < 0)
+		{
 
-		PWMout = PWMout + Error_Kp + Error_Ki + Error_Kd;
+			__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , 0);
+			__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_2 , PWMout*(-1));
+		}
 
-
-		__HAL_TIM_SET_COMPARE(&htim3 , TIM_CHANNEL_1 , PWMout);
 
 
 
@@ -365,6 +381,10 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
@@ -469,7 +489,7 @@ __inline__ float EncoderVelocity_Update()
 	EncoderLastPosition = EncoderNowPosition;
 	EncoderLastTime = EncoderNowTime;
 
-	return (EncoderDiffPosition*1000000) / ((float)EncoderDiffTime);
+	return (EncoderDiffPosition*1000000) / ((float)EncoderDiffTime); //1000000=us9
 
 }
 //time in microseconds
